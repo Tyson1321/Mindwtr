@@ -45,4 +45,14 @@ cd packages/core
 bun run test -- src/mimo-speech.test.ts src/calendar-week-number.test.ts src/speech-to-task.test.ts
 ```
 
-安装包构建沿用原项目文档与 GitHub Actions 工作流。
+Android 独立安装包使用 `Mindwtr MiMo` 名称与 `tech.dongdongbh.mindwtr.mimo` 包名，可与原版并存，数据各自独立。此变体保持完整在线语音功能，API 密钥由用户安装后填写。
+
+GitHub Actions 的 `Mindwtr MiMo APK` 工作流会在此功能分支的相关代码推送后自动构建，也支持手动运行。成功后在该次运行的 Artifacts 中下载 `mindwtr-mimo-android-arm64`，解压即可获得 APK、校验值及安装说明。此工作流无需 Expo 令牌或发布签名密钥，安装包内不包含用户 API Key。
+
+```sh
+# 需要 JDK 17、Android SDK 36、Build Tools 36.0.0、NDK 27.1.12297006、CMake 3.22.1
+# 从仓库根目录构建适用于现代 Android 手机的 arm64 APK
+APP_VARIANT=mimo ARCHS=arm64-v8a bash apps/mobile/scripts/android_build.sh
+```
+
+脚本执行 release 构建并内置 JavaScript，安装后无需 Metro 或电脑服务。未配置发布签名时使用项目测试签名，仅用于自行安装；后续更新须保持同一签名。默认输出到 `apps/mobile/build/`。
