@@ -391,3 +391,6 @@ export { checklistProjectBlockReason, prepareChecklistProjectConversion } from '
 export type { ChecklistProjectConversion } from './checklist-project-conversion';
 
 export * from './task-reminder-policy';
+
+export * from './mimo-speech';
+export * from './calendar-week-number';

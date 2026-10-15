@@ -1,5 +1,7 @@
 import type { AIProviderId, AIReasoningEffort, AiSettings } from '@mindwtr/core';
 import {
+    isMiMoSpeechModel,
+    MIMO_SPEECH_PRESET,
     AI_REQUEST_TIMEOUT_OPTIONS,
     formatOpenAIExtraBodyParams,
     parseOpenAIExtraBodyParamsInput,
@@ -592,10 +594,14 @@ export function SettingsAiPage({
                     <div className="border-t border-border p-4 space-y-3">
                         <SettingRow settingsKey="speechProvider" title={t.speechProvider}>
                             <select
-                                value={speechProvider}
-                                onChange={(e) => onSpeechProviderChange(e.target.value as SpeechProvider)}
+                                value={speechProvider === 'openai' && isMiMoSpeechModel(speechModel) ? 'mimo' : speechProvider}
+                                onChange={(e) => {
+                                    if (e.target.value === 'mimo') onUpdateSpeechSettings(MIMO_SPEECH_PRESET);
+                                    else onSpeechProviderChange(e.target.value as SpeechProvider);
+                                }}
                                 className="text-sm bg-muted/50 text-foreground border border-border rounded px-2 py-1 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
                             >
+                                <option value="mimo">小米 MiMo · 语音识别</option>
                                 <option value="openai">{t.aiProviderOpenAI}</option>
                                 <option value="gemini">{t.aiProviderGemini}</option>
                                 <option value="whisper">{t.speechProviderOffline}</option>

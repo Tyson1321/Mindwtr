@@ -1,10 +1,10 @@
+import { isMiMoSpeechModel } from '@mindwtr/core';
 import React from 'react';
 import { ActivityIndicator, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import type { ThemeColors } from '@/hooks/use-theme-colors';
 import { CompactText } from '@/components/compact-text';
 
-import { DEFAULT_WHISPER_MODEL } from './settings.constants';
 import { styles } from './settings.styles';
 
 type SettingsTranslator = (key: string, values?: Record<string, string | number | boolean | null | undefined>) => string;
@@ -15,6 +15,7 @@ type AiSettingsSpeechCardProps = {
     isExpoGo: boolean;
     isFossBuild: boolean;
     tr: SettingsTranslator;
+    onMiMoPreset?: () => void;
     onDeleteWhisperModel: () => void;
     onDownloadWhisperModel: () => void;
     onOpenModelPicker: () => void;
@@ -48,6 +49,7 @@ export function AiSettingsSpeechCard({
     isExpoGo,
     isFossBuild,
     tr,
+    onMiMoPreset,
     onDeleteWhisperModel,
     onDownloadWhisperModel,
     onOpenModelPicker,
@@ -88,6 +90,15 @@ export function AiSettingsSpeechCard({
 
             {speechOpen && (
                 <>
+                    {!isFossBuild && onMiMoPreset && (
+                        <TouchableOpacity
+                            onPress={onMiMoPreset}
+                            accessibilityRole="button"
+                            style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}
+                        >
+                            <Text style={[styles.settingLabel, { color: tc.tint }]}>小米 MiMo · 语音识别</Text>
+                        </TouchableOpacity>
+                    )}
                     <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: tc.border }]}>
                         <View style={styles.settingInfo}>
                             <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.speechEnable')}</Text>
@@ -103,7 +114,7 @@ export function AiSettingsSpeechCard({
                             <Text style={[styles.settingLabel, { color: tc.text }]}>{t('settings.speechProvider')}</Text>
                             <Text style={[styles.settingDescription, { color: tc.secondaryText }]}>
                                 {speechProvider === 'openai'
-                                    ? t('settings.aiProviderOpenAI')
+                                    ? (isMiMoSpeechModel(speechModel) ? '小米 MiMo' : t('settings.aiProviderOpenAI'))
                                     : speechProvider === 'gemini'
                                         ? t('settings.aiProviderGemini')
                                         : t('settings.speechProviderOffline')}

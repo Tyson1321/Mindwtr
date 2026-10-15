@@ -1,3 +1,4 @@
+import { createMiMoAudioRecorder, type CaptureAudioRecorder } from '../lib/mimo-recorder';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import {
@@ -5,10 +6,10 @@ import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
-  type AudioRecorder as ExpoAudioRecorder,
 } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import {
+  isMiMoSpeechModel,
   DEFAULT_PROJECT_COLOR,
   buildTaskUpdatesFromSpeechResult,
   generateUUID,
@@ -61,7 +62,7 @@ type BuildTaskPropsResult = {
 type SpeechApplyResult = 'applied' | 'empty' | 'skipped';
 
 export type RecordingState =
-  | { kind: 'expo'; recorder: ExpoAudioRecorder }
+  | { kind: 'expo'; recorder: CaptureAudioRecorder }
   | {
       kind: 'whisper';
       stop: () => Promise<void>;
@@ -113,7 +114,7 @@ const queueRecordingDeviceOperation = <T,>(operation: () => Promise<T>): Promise
   return result;
 };
 
-const createExpoAudioRecorder = (): ExpoAudioRecorder => {
+const createExpoAudioRecorder = (): CaptureAudioRecorder => {
   const preset = RecordingPresets.HIGH_QUALITY;
   const platformOptions = Platform.OS === 'ios'
     ? preset.ios
@@ -133,7 +134,7 @@ const createExpoAudioRecorder = (): ExpoAudioRecorder => {
   });
 };
 
-const stopAndReleaseExpoRecorder = async (recorder: ExpoAudioRecorder) => {
+const stopAndReleaseExpoRecorder = async (recorder: CaptureAudioRecorder) => {
   let error: unknown;
   try {
     await recorder.stop();
@@ -141,7 +142,7 @@ const stopAndReleaseExpoRecorder = async (recorder: ExpoAudioRecorder) => {
     error = stopError;
   }
   const uri = recorder.uri;
-  recorder.release();
+  await recorder.release();
   return { error, uri };
 };
 
@@ -572,19 +573,21 @@ export function useQuickCaptureAudio({
             interruptionModeAndroid: 'duckOthers',
           });
           if (!isStartCurrent()) return null;
-          const acquired = createExpoAudioRecorder();
+          const acquired = provider === 'openai' && isMiMoSpeechModel(model)
+            ? createMiMoAudioRecorder()
+            : createExpoAudioRecorder();
           try {
             await acquired.prepareToRecordAsync();
             if (!isStartCurrent()) {
               const staleUri = acquired.uri;
-              acquired.release();
+              await acquired.release();
               if (staleUri) safeDeleteFile(new File(staleUri), 'stale_expo_prepare');
               return null;
             }
             acquired.record();
             return acquired;
           } catch (error) {
-            acquired.release();
+            await acquired.release();
             throw error;
           }
         });

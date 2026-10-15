@@ -1,6 +1,7 @@
+// Fork-specific UI snapshots; preserve upstream fixtures for the experimental native host.
 /**
  * React Native's Settings › Advanced › AI screen, replayed against the frozen
- * parity fixture (packages/core/src/ai-settings-parity.fixtures.json) that core's
+ * parity fixture (packages/core/src/ai-settings-mimo-parity.fixtures.json) that core's
  * AI settings model and the native host contract are tested against.
  *
  * To recapture, keep every file under apps/ at HEAD except this one, then run
@@ -34,7 +35,7 @@ import {
 
 import { AISettingsScreen } from './ai-settings-screen';
 
-const FIXTURE_PATH = new URL('../../../../packages/core/src/ai-settings-parity.fixtures.json', import.meta.url).pathname;
+const FIXTURE_PATH = new URL('../../../../packages/core/src/ai-settings-mimo-parity.fixtures.json', import.meta.url).pathname;
 const CAPTURE = process.env.MINDWTR_CAPTURE_AI_SETTINGS === '1';
 const TINT = '#3b82f6';
 const DANGER = '#ef4444';
@@ -618,7 +619,8 @@ function captureProvenance() {
   return {
     command: 'cd apps/mobile && MINDWTR_CAPTURE_AI_SETTINGS=1 TZ=UTC bunx vitest run components/settings/ai-settings-screen.parity.test.tsx',
     capturedAt: head,
-    sourceState: 'Every file under apps/ was at HEAD except the parity harnesses. No React Native code imported core\'s AI settings model yet.',
+    sourceTree: git('rev-parse', 'HEAD^{tree}').trim(),
+    sourceState: 'Fork React Native UI at HEAD except parity harnesses. Upstream experimental native-host snapshots are preserved separately.',
     device: 'The device is stubbed: Android, not Expo Go; AsyncStorage and the secure store are the scenario\'s maps (the secure store is available); the model lists answer from the scenario\'s queue and fail when none is queued; the Whisper model store finds no downloaded model and names each model file:///whisper/<id>.bin.',
   };
 }
@@ -640,6 +642,16 @@ describe('React Native Settings › AI parity fixture', () => {
     Alert.alert = originalAlert;
     vi.useRealTimers();
     resetForTests();
+  });
+
+  it('applies the MiMo preset through the real speech settings control', async () => {
+    await runScenario({ name: 'mimo preset', settings: 'base', device: {}, actions: [
+      ['press', 'k:settings.speechTitle'], ['press', '小米 MiMo · 语音识别'],
+    ] });
+    expect(useTaskStore.getState().settings.ai?.speechToText).toMatchObject({
+      enabled: true, provider: 'openai', model: 'mimo-v2.5-asr',
+      baseUrl: 'https://api.xiaomimimo.com/v1', mode: 'transcribe_only',
+    });
   });
 
   it('replays every scenario exactly as frozen', async () => {

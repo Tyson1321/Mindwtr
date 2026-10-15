@@ -161,7 +161,7 @@ export const styles = StyleSheet.create({
   },
   dayCell: {
     width: '14.28%',
-    aspectRatio: 1,
+    aspectRatio: 0.83,
     padding: 4,
     alignItems: 'center',
     justifyContent: 'flex-start',
