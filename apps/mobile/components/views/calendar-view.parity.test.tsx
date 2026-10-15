@@ -1,6 +1,7 @@
+// Fork-specific UI snapshots; preserve upstream fixtures for the experimental native host.
 /**
  * React Native's Calendar screen, replayed against the calendar views parity
- * fixture (packages/core/src/calendar-views-parity.fixtures.json).
+ * fixture (packages/core/src/calendar-weeks-parity.fixtures.json).
  * MINDWTR_CAPTURE_CALENDAR_VIEWS=1 rewrites it.
  *
  * Each scenario renders the real screen with the real core store, presses,
@@ -34,7 +35,7 @@ import {
 import { styles } from './calendar/calendar-view.styles';
 import { CalendarView } from './calendar-view';
 
-const FIXTURE_PATH = new URL('../../../../packages/core/src/calendar-views-parity.fixtures.json', import.meta.url).pathname;
+const FIXTURE_PATH = new URL('../../../../packages/core/src/calendar-weeks-parity.fixtures.json', import.meta.url).pathname;
 const CAPTURE = process.env.MINDWTR_CAPTURE_CALENDAR_VIEWS === '1';
 const TIME_ZONE = 'America/New_York';
 /** Wednesday 2026-10-28, 10:00 in New York (EDT). The week of Sunday Nov 1 leaves daylight time. */
@@ -824,6 +825,13 @@ describe('React Native Calendar screen parity fixture', () => {
       const timeline = visibleNodes(root).find((node) => node.props.contentContainerStyle === styles.weekVerticalContent)!;
       expect(drawnTop(first.props.style)).toBeGreaterThanOrEqual(-edgePadding(timeline.props.contentContainerStyle, 'Top'));
     });
+  });
+
+  it('shows ISO week numbers in month, day and week views', async () => {
+    for (const mode of ['month', 'day', 'week'] as const) {
+      const observations = await runScenario({ name: 'ISO weeks ' + mode, settings: mode, actions: [] });
+      expect((observations[0].texts as string[]).some((text) => /W\d{2}/.test(text))).toBe(true);
+    }
   });
 
   it('replays every scenario exactly as frozen', async () => {

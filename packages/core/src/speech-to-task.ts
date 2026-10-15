@@ -1,3 +1,4 @@
+import { buildMiMoSpeechBody, isMiMoSpeechModel, readMiMoTranscript, resolveMiMoSpeechEndpoint } from './mimo-speech';
 import type { AudioCaptureMode, AudioFieldStrategy } from './ai/types';
 import { resolveGeminiModel } from './ai/catalog';
 import { fetchTextWithTimeout } from './ai/utils';
@@ -347,6 +348,18 @@ export async function runRemoteSpeechToTaskCapture(
             },
             direct: (prompt) => requestRemoteGemini(config, audio, prompt, fetcher),
         });
+    }
+    if (isMiMoSpeechModel(config.model)) {
+        if (!config.apiKey?.trim()) throw new Error('Xiaomi MiMo API key missing');
+        if (!audio.readBytes) throw new Error('MiMo audio bytes adapter missing');
+        const { bytes } = await audio.readBytes();
+        const result = await fetchSpeechJson(resolveMiMoSpeechEndpoint(config.baseUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'api-key': config.apiKey.trim() },
+            body: buildMiMoSpeechBody(bytes, normalizeSpeechLanguage(config.language)),
+        }, fetcher);
+        // ASR only: never send the Xiaomi key or transcript to OpenAI's parser.
+        return { transcript: readMiMoTranscript(result) };
     }
     return runSpeechToTaskCapture(config, {
         transcribe: () => transcribeRemoteOpenAI(config, audio, fetcher),

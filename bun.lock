@@ -270,6 +270,7 @@
     "react-native-draggable-flatlist@4.0.3": "patches/react-native-draggable-flatlist@4.0.3.patch",
     "react-native-fs@2.20.0": "patches/react-native-fs@2.20.0.patch",
     "@op-engineering/op-sqlite@17.1.2": "patches/@op-engineering%2Fop-sqlite@17.1.2.patch",
+    "@fugood/react-native-audio-pcm-stream@1.1.4": "patches/@fugood%2Freact-native-audio-pcm-stream@1.1.4.patch",
     "mdast-util-gfm-autolink-literal@2.0.1": "patches/mdast-util-gfm-autolink-literal@2.0.1.patch",
   },
   "overrides": {

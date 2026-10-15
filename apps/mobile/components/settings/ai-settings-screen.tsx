@@ -1,3 +1,4 @@
+import { MIMO_SPEECH_PRESET } from '@mindwtr/core';
 import React, { useCallback, useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -551,6 +552,7 @@ export function AISettingsScreen() {
                     />
 
                     <AiSettingsSpeechCard
+                        onMiMoPreset={() => updateSpeechSettings(MIMO_SPEECH_PRESET)}
                         isExpoGo={isExpoGo}
                         isFossBuild={isFossBuild}
                         tr={tr}

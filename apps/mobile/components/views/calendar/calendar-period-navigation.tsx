@@ -5,6 +5,7 @@ import { styles } from './calendar-view.styles';
 
 type CalendarPeriodNavigationProps = {
   label: string;
+  weekLabel?: string;
   nextLabel: string;
   onNext: () => void;
   onPrevious: () => void;
@@ -21,6 +22,7 @@ type CalendarPeriodNavigationProps = {
 
 export function CalendarPeriodNavigation({
   label,
+  weekLabel,
   nextLabel,
   onNext,
   onPrevious,
@@ -50,6 +52,7 @@ export function CalendarPeriodNavigation({
         >
           {label}
         </Text>
+        {weekLabel && <Text style={{ color: tc.text, fontSize: 11, textAlign: 'center' }}>{weekLabel}</Text>}
         <Pressable
           accessibilityLabel={todayLabel}
           accessibilityRole="button"

@@ -64,6 +64,17 @@ describe('app.config APP_VARIANT', () => {
     expect(config.plugins).toContainEqual(['./plugins/ios-watch', { enabled }]);
   });
 
+  it('gives the MiMo APK a separate Android identity and standalone scheme', async () => {
+    vi.stubEnv('APP_VARIANT', 'mimo');
+    const config = await loadConfig();
+    expect(config.name).toBe('Mindwtr MiMo');
+    expect(config.android?.package).toBe('tech.dongdongbh.mindwtr.mimo');
+    expect(config.scheme).toBe('mindwtr-mimo');
+    expect(config.platforms).toEqual(['android']);
+    expect(config.extra?.isFossBuild).toBe(false);
+    expect(widgetLabels(config)).toEqual(['Mindwtr MiMo']);
+  });
+
   it('isolates the Android benchmark identity and disables heartbeat traffic', async () => {
     vi.stubEnv('APP_VARIANT', 'benchmark');
     const config = await loadConfig();

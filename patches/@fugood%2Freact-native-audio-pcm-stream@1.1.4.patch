@@ -1,0 +1,166 @@
+diff --git a/node_modules/@fugood/react-native-audio-pcm-stream/.bun-tag-8ba482f985a4b25a b/.bun-tag-8ba482f985a4b25a
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+index 6d7d17d3adbf3d081d1f59468225c4a1e7dd1f65..d747579b910326c7a6bb3bb3a32ccdb49d102eab 100644
+--- a/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
++++ b/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+@@ -27,7 +27,8 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
+     private AudioRecord recorder = null;
+     private int bufferSize;
+-    private boolean isRecording;
++    private volatile boolean isRecording;
++    private Thread recordingThread;
+ 
+     public RNLiveAudioStreamModule(ReactApplicationContext reactContext) {
+         super(reactContext);
+@@ -91,7 +92,8 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+         isRecording = true;
+         recorder.startRecording();
+ 
+-        Thread recordingThread = new Thread(new Runnable() {
++        final AudioRecord activeRecorder = recorder;
++        recordingThread = new Thread(new Runnable() {
+             public void run() {
+                 try {
+                     int bytesRead;
+@@ -100,20 +102,20 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+                     byte[] buffer = new byte[bufferSize];
+ 
+                     while (isRecording) {
+-                        bytesRead = recorder.read(buffer, 0, buffer.length);
++                        bytesRead = activeRecorder.read(buffer, 0, buffer.length);
+ 
+                         // skip first 2 buffers to eliminate "click sound"
+                         if (bytesRead > 0 && ++count > 2) {
+-                            base64Data = Base64.encodeToString(buffer, Base64.NO_WRAP);
++                            base64Data = Base64.encodeToString(buffer, 0, bytesRead, Base64.NO_WRAP);
+                             eventEmitter.emit("data", base64Data);
+                         }
+                     }
+-                    recorder.stop();
++                    if (activeRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) activeRecorder.stop();
+                 } catch (Exception e) {
+                     e.printStackTrace();
+                 } finally {
+-                    recorder.release();
+-                    recorder = null;
++                    activeRecorder.release();
++                    if (recorder == activeRecorder) recorder = null;
+                 }
+             }
+         });
+@@ -122,7 +124,26 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+     }
+ 
+     @ReactMethod
+-    public void stop() {
++    public void stop(Promise promise) {
+         isRecording = false;
++        final Thread thread = recordingThread;
++        if (thread == null) {
++            if (recorder != null) { recorder.release(); recorder = null; }
++            promise.resolve(null);
++            return;
++        }
++        // Do not resolve until the capture thread emitted its last data and released the mic.
++        new Thread(new Runnable() {
++            public void run() {
++                try {
++                    thread.join();
++                    if (recordingThread == thread) recordingThread = null;
++                    promise.resolve(null);
++                } catch (InterruptedException error) {
++                    Thread.currentThread().interrupt();
++                    promise.reject("E_PCM_STOP", "Interrupted while stopping PCM recording", error);
++                }
++            }
++        }).start();
+     }
+ }
+diff --git a/index.d.ts b/index.d.ts
+index b846438438d1e1becb23428179fbc01bd92f657a..595bc6d6d173c281e69d6018556848a1b248c549 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -1,30 +1,16 @@
+-declare module "react-native-live-audio-stream" {
+-  export interface IAudioRecord {
+-    init: (options: Options) => void
+-    start: () => void
+-    stop: () => Promise<string>
+-    on: (event: "data", callback: (data: string) => void) => void
+-  }
+-
+-  export interface Options {
+-    sampleRate: number
+-    /**
+-     * - `1 | 2`
+-     */
+-    channels: number
+-    /**
+-     * - `8 | 16`
+-     */
+-    bitsPerSample: number
+-    /**
+-     * - `6`
+-     */
+-    audioSource?: number
+-    wavFile: string
+-    bufferSize?: number
+-  }
+-
+-  const AudioRecord: IAudioRecord
+-
+-  export default AudioRecord;
++export interface Options {
++  sampleRate: number;
++  channels: number;
++  bitsPerSample: number;
++  audioSource?: number;
++  bufferSize?: number;
++  wavFile?: string;
+ }
++export interface AudioPcmStream {
++  init(options: Options): Promise<void> | void;
++  start(): void;
++  stop(): Promise<void>;
++  on(event: 'data', callback: (data: string) => void): { remove(): void };
++}
++declare const stream: AudioPcmStream;
++export default stream;
+diff --git a/ios/RNLiveAudioStream.m b/ios/RNLiveAudioStream.m
+index a5365d516ea5dfdeba9e5ed64c4ba9dd0b80961b..067a25411a81d17de87905e5596d991579e1f956 100644
+--- a/ios/RNLiveAudioStream.m
++++ b/ios/RNLiveAudioStream.m
+@@ -58,7 +58,10 @@ RCT_EXPORT_METHOD(start) {
+     AudioQueueStart(_recordState.mQueue, NULL);
+ }
+ 
+-RCT_EXPORT_METHOD(stop) {
++RCT_REMAP_METHOD(stop,
++                 stopWithResolver:(RCTPromiseResolveBlock)resolve
++                 rejecter:(RCTPromiseRejectBlock)reject) {
++    (void)reject;
+     RCTLogInfo(@"[RNLiveAudioStream] stop");
+     if (_recordState.mIsRunning) {
+         _recordState.mIsRunning = false;
+@@ -67,7 +70,9 @@ RCT_EXPORT_METHOD(stop) {
+             AudioQueueFreeBuffer(_recordState.mQueue, _recordState.mBuffers[i]);
+         }
+         AudioQueueDispose(_recordState.mQueue, true);
++        _recordState.mQueue = NULL;
+     }
++    resolve(nil);
+ }
+ 
+ void HandleInputBuffer(void *inUserData,
+@@ -97,7 +102,7 @@ void HandleInputBuffer(void *inUserData,
+ 
+ - (void)dealloc {
+     RCTLogInfo(@"[RNLiveAudioStream] dealloc");
+-    AudioQueueDispose(_recordState.mQueue, true);
++    if (_recordState.mQueue != NULL) AudioQueueDispose(_recordState.mQueue, true);
+ }
+ 
+ @end

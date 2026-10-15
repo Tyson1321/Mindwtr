@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
+  formatCalendarISOWeek,
+  formatCalendarISOWeekRange,
   CALENDAR_WEEK_DENSITY_VALUES,
   CALENDAR_WEEK_VISIBLE_DAYS_MAX,
   CALENDAR_WEEK_VISIBLE_DAYS_MIN,
@@ -842,6 +844,7 @@ export function CalendarView() {
         <View style={[styles.dayModeHeader, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
           <CalendarPeriodNavigation
             label={selectedDayModeLabel}
+            weekLabel={formatCalendarISOWeek(selectedDate ?? new Date(), locale)}
             nextLabel={navigationLabels.next}
             onNext={() => shiftSelectedDate(1)}
             onPrevious={() => shiftSelectedDate(-1)}
@@ -1055,6 +1058,7 @@ export function CalendarView() {
         <View style={[styles.header, { backgroundColor: tc.cardBg, borderBottomColor: tc.border }]}>
           <CalendarPeriodNavigation
             label={weekLabel}
+            weekLabel={formatCalendarISOWeekRange(weekDays, locale)}
             nextLabel={navigationLabels.next}
             onNext={() => shiftSelectedDate(7)}
             onPrevious={() => shiftSelectedDate(-7)}
@@ -1595,6 +1599,15 @@ export function CalendarView() {
                       {getCalendarDayOfMonth(date, calendarSystem)}
                     </Text>
                   </View>
+                  {(date.getDay() === 1 || getCalendarDayOfMonth(date, calendarSystem) === 1) && (
+                    <Text
+                      numberOfLines={1}
+                      accessibilityLabel={formatCalendarISOWeek(date, locale)}
+                      style={{ color: tc.secondaryText, fontSize: 9, marginBottom: 2 }}
+                    >
+                      {formatCalendarISOWeek(date, locale, false)}
+                    </Text>
+                  )}
                   {visibleItems.length > 0 && (
                     <View style={styles.monthPreviewList}>
                       {visibleItems.map((item) => {

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEve
 import { isSameDay, isToday } from 'date-fns';
 import { CalendarClock, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus, Search } from 'lucide-react';
 import {
+    formatCalendarISOWeek,
+    formatCalendarISOWeekRange,
     formatI18nTemplate,
     getCalendarDayOfMonth,
     getCalendarMonthIndex,
@@ -414,6 +416,11 @@ export function CalendarView() {
                                 aria-expanded={isMonthPickerOpen}
                             >
                                 {currentMonthLabel}
+                                {(viewMode === 'week' || viewMode === 'day') && (
+                                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                        {formatCalendarISOWeekRange(timelineDays.length ? timelineDays : [selectedDate ?? currentMonth], locale)}
+                                    </span>
+                                )}
                             </button>
                             {isMonthPickerOpen && (
                                 <div className="absolute right-0 top-10 z-20 w-64 rounded-lg border border-border bg-popover p-3 shadow-lg">
@@ -618,6 +625,12 @@ export function CalendarView() {
                                     {isSelected && <div className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
                                 </div>
 
+                                {day.getDay() === 1 && (
+                                    <div className="mb-1 truncate text-[10px] font-medium text-muted-foreground"
+                                        title={formatCalendarISOWeek(day, locale)}>
+                                        {formatCalendarISOWeek(day, locale, false)}
+                                    </div>
+                                )}
                                 <div className="space-y-1">
                                     {visibleItems.map((item) => {
                                         const isAllDayScheduled = item.kind === 'scheduled' && !hasTimeComponent(item.task.startTime);

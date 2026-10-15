@@ -44,6 +44,7 @@ const promptTestControlsEnabled = process.env.PROMPT_TEST_CONTROLS_ENABLED === '
 // hits CloudKit's Development environment anyway, only widget payloads collide.
 const isDevVariant = (process.env.APP_VARIANT ?? '').trim() === 'development';
 const isBenchmarkVariant = (process.env.APP_VARIANT ?? '').trim() === 'benchmark';
+const isMiMoVariant = (process.env.APP_VARIANT ?? '').trim() === 'mimo';
 const pccEvaluationOptIn = (process.env.MINDWTR_PCC_EVALUATION_ENABLED ?? '').trim() === '1';
 const applePccEvaluationEnabled = isDevVariant && pccEvaluationOptIn;
 const PCC_ENTITLEMENT = 'com.apple.developer.private-cloud-compute';
@@ -79,10 +80,10 @@ const withIosSceneLifecyclePlugin = (
 };
 
 const withAppVariant = (base: ExpoConfig): ExpoConfig => {
-  if (!isDevVariant && !isBenchmarkVariant) return base;
-  // Benchmark builds are Android-only: iOS extensions still share the store App Group.
-  const idSuffix = isBenchmarkVariant ? '.benchmark' : DEV_VARIANT_ID_SUFFIX;
-  const nameSuffix = isBenchmarkVariant ? ' Benchmark' : DEV_VARIANT_NAME_SUFFIX;
+  if (!isDevVariant && !isBenchmarkVariant && !isMiMoVariant) return base;
+  // Benchmark and MiMo builds are Android-only: iOS extensions share the store App Group.
+  const idSuffix = isMiMoVariant ? '.mimo' : isBenchmarkVariant ? '.benchmark' : DEV_VARIANT_ID_SUFFIX;
+  const nameSuffix = isMiMoVariant ? ' MiMo' : isBenchmarkVariant ? ' Benchmark' : DEV_VARIANT_NAME_SUFFIX;
   const plugins = (base.plugins ?? []).map((entry) => {
     if (!Array.isArray(entry) || entry[0] !== './plugins/android-widget') return entry;
     const props = (entry[1] ?? {}) as { label?: string };
@@ -92,7 +93,7 @@ const withAppVariant = (base: ExpoConfig): ExpoConfig => {
   return {
     ...base,
     name: `${base.name}${nameSuffix}`,
-    ...(isBenchmarkVariant ? { platforms: ['android' as const], scheme: 'mindwtr-benchmark' } : {}),
+    ...((isBenchmarkVariant || isMiMoVariant) ? { platforms: ['android' as const], scheme: isMiMoVariant ? 'mindwtr-mimo' : 'mindwtr-benchmark' } : {}),
     android: { ...base.android, package: `${base.android?.package}${idSuffix}` },
     ios: { ...base.ios, bundleIdentifier: `${base.ios?.bundleIdentifier}${idSuffix}` },
     plugins,
